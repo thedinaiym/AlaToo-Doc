@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from app import models
 from app.database import Base, close_db_connection, engine
+from app.routers.documents import router as documents_router
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.include_router(documents_router)
 
 
 @app.get("/", tags=["root"])
