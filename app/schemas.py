@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 
@@ -19,7 +21,30 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     university_id: str
     full_name: str
+    faculty: str | None = None
     role: UserRole
+
+
+class BroadcastRequest(BaseModel):
+    title: str
+    text: str
+    target_faculty: str
+
+
+class BroadcastResponse(BaseModel):
+    created_count: int
+    target_faculty: str
+
+
+class LoginRequest(BaseModel):
+    university_id: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 class DocumentCreate(BaseModel):
@@ -49,3 +74,7 @@ class SignatureResponse(BaseModel):
     user_id: uuid.UUID
     signature_hash: str
     signed_at: datetime
+
+
+class DocumentDetailResponse(DocumentResponse):
+    signatures: list[SignatureResponse] = []

@@ -3,26 +3,47 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TEMP_UNIVERSITY_ID = "123";
-const TEMP_PASSWORD = "123";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export default function LoginPage() {
   const router = useRouter();
   const [universityId, setUniversityId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    if (universityId === TEMP_UNIVERSITY_ID && password === TEMP_PASSWORD) {
-      localStorage.setItem("access_token", "temporary-dev-token");
-      router.push("/");
-      return;
+    try {
+      const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          university_id: universityId,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        setError("Invalid university ID or password.");
+        return;
+      }
+
+      const data = await response.json();
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("current_user", JSON.stringify(data.user));
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Unable to connect to the server.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setError("Invalid university ID or password.");
   }
 
   return (
@@ -84,9 +105,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+            disabled={isSubmitting}
+            className="w-full rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
-            Sign In
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </div>

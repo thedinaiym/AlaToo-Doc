@@ -11,7 +11,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class Settings(BaseSettings):
-    database_url: str
+    database_url: str = "sqlite+aiosqlite:///./alatoo_doc.db"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -30,7 +30,6 @@ settings = get_settings()
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_pre_ping=True,
 )
 
 AsyncSessionLocal = async_sessionmaker(
