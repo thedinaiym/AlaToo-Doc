@@ -33,11 +33,12 @@ export default function DocumentDetailPage({ documentId }: Props) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [error, setError] = useState("");
 
-  const pdfUrl = document?.file_url
+  const rawPdfUrl = document?.file_url
     ? document.file_url.startsWith("http")
       ? document.file_url
       : `${API_URL}${document.file_url}`
     : "";
+  const pdfUrl = rawPdfUrl ? `${rawPdfUrl}?v=${document?.id}-${document?.status}` : "";
 
   const latestSignature = document?.signatures?.[document.signatures.length - 1];
   const canReview =
