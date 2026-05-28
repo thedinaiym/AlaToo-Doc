@@ -12,6 +12,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./alatoo_doc.db"
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
 
     model_config = SettingsConfigDict(
         env_file=".env",

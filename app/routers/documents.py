@@ -1,4 +1,3 @@
-import os
 import uuid
 from datetime import datetime
 from functools import lru_cache
@@ -10,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db_session
+from app.database import get_db_session, get_settings
 from app.dependencies import get_current_user
 from app.models import Document, DocumentStatus, Signature, User, UserRole
 from app.pdf_engine import DocumentType, render_document_to_pdf
@@ -348,7 +347,7 @@ class DocumentPredictionResponse(BaseModel):
 
 @lru_cache
 def get_groq_client() -> AsyncGroq:
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = get_settings().groq_api_key
 
     if not api_key:
         raise RuntimeError("GROQ_API_KEY environment variable is not set")
@@ -379,7 +378,7 @@ async def predict_document_text(
 
     try:
         completion = await client.chat.completions.create(
-            model="llama3-70b-8192",
+            model=get_settings().groq_model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": build_user_prompt(payload)},

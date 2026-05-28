@@ -7,8 +7,10 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from xhtml2pdf import pisa
+from xhtml2pdf.default import DEFAULT_FONT
 
 
 class DocumentType(str, enum.Enum):
@@ -31,16 +33,35 @@ def _candidate_font_paths() -> tuple[Path, ...]:
         Path("C:/Windows/Fonts/timesnewroman.ttf"),
         Path("/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf"),
         Path("/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"),
         Path("/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"),
         Path("/Library/Fonts/Times New Roman.ttf"),
         Path("/System/Library/Fonts/Supplemental/Times New Roman.ttf"),
     )
 
 
-def _resolve_cyrillic_font() -> Path:
-    for font_path in _candidate_font_paths():
+def _candidate_bold_font_paths() -> tuple[Path, ...]:
+    return (
+        Path("C:/Windows/Fonts/timesbd.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf"),
+        Path("/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"),
+        Path("/Library/Fonts/Times New Roman Bold.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf"),
+    )
+
+
+def _resolve_existing_font(font_paths: tuple[Path, ...]) -> Path | None:
+    for font_path in font_paths:
         if font_path.exists():
             return font_path
+    return None
+
+
+def _resolve_cyrillic_font() -> Path:
+    font_path = _resolve_existing_font(_candidate_font_paths())
+    if font_path is not None:
+        return font_path
 
     raise RuntimeError(
         "No Cyrillic-capable serif font found. Install Times New Roman or Liberation Serif."
@@ -48,7 +69,25 @@ def _resolve_cyrillic_font() -> Path:
 
 
 CYRILLIC_FONT_PATH = _resolve_cyrillic_font()
+BOLD_CYRILLIC_FONT_PATH = _resolve_existing_font(_candidate_bold_font_paths()) or CYRILLIC_FONT_PATH
 pdfmetrics.registerFont(TTFont(FONT_FAMILY, str(CYRILLIC_FONT_PATH)))
+pdfmetrics.registerFont(TTFont(f"{FONT_FAMILY}-Bold", str(BOLD_CYRILLIC_FONT_PATH)))
+registerFontFamily(
+    FONT_FAMILY,
+    normal=FONT_FAMILY,
+    bold=f"{FONT_FAMILY}-Bold",
+    italic=FONT_FAMILY,
+    boldItalic=f"{FONT_FAMILY}-Bold",
+)
+DEFAULT_FONT.update(
+    {
+        FONT_FAMILY.lower(): FONT_FAMILY,
+        "times new roman": FONT_FAMILY,
+        "times": FONT_FAMILY,
+        "times-roman": FONT_FAMILY,
+        "serif": FONT_FAMILY,
+    }
+)
 
 
 env = Environment(
