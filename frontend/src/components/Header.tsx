@@ -1,7 +1,19 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
+  const router = useRouter();
+
+  function handleLogout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("current_user");
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
       <Link href="/dashboard" className="text-xl font-bold text-blue-700">
@@ -27,6 +39,13 @@ export default function Header() {
         >
           Login
         </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="rounded-md bg-gray-950 px-3 py-1.5 text-white transition hover:bg-gray-800"
+        >
+          Logout
+        </button>
       </nav>
 
       <Image

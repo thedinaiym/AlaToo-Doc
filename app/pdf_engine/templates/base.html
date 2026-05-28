@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 20mm 10mm 20mm 30mm;
+      }
+
+      body {
+        color: #000000;
+        font-family: "{{ font_family }}", "Times New Roman", serif;
+        font-size: 12pt;
+        line-height: 1.25;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .logo-row {
+        margin-bottom: 6mm;
+        text-align: center;
+      }
+
+      .logo {
+        height: 22mm;
+        width: auto;
+      }
+
+      .header-table {
+        margin-bottom: 14mm;
+      }
+
+      .header-spacer {
+        width: 50%;
+      }
+
+      .recipient-header {
+        font-size: 12pt;
+        line-height: 1.15;
+        text-align: left;
+        vertical-align: top;
+        width: 50%;
+      }
+
+      .recipient-header p {
+        margin-bottom: 1.5mm;
+      }
+
+      .document-title {
+        font-size: 12pt;
+        font-weight: bold;
+        line-height: 1.15;
+        margin-bottom: 2mm;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .document-number {
+        font-size: 12pt;
+        line-height: 1.15;
+        margin-bottom: 12mm;
+        text-align: center;
+      }
+
+      .statement-body {
+        font-size: 12pt;
+        line-height: 1.25;
+        orphans: 3;
+        text-align: justify;
+        widows: 3;
+      }
+
+      .statement-body p {
+        margin-bottom: 3mm;
+        page-break-inside: avoid;
+        text-align: justify;
+        text-indent: 12.5mm;
+      }
+
+      .bottom-section {
+        margin-top: 18mm;
+        page-break-inside: avoid;
+      }
+
+      .date-cell {
+        font-size: 12pt;
+        text-align: left;
+        vertical-align: top;
+        width: 50%;
+      }
+
+      .signature-cell {
+        text-align: right;
+        vertical-align: top;
+        width: 50%;
+      }
+
+      .signature-box {
+        border: 1pt solid #000000;
+        display: inline-block;
+        font-size: 10pt;
+        font-weight: bold;
+        height: 20mm;
+        line-height: 20mm;
+        text-align: center;
+        width: 48mm;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="logo-row">
+      <img class="logo" src="{{ logo_path }}" alt="University logo" />
+    </div>
+
+    <table class="header-table">
+      <tr>
+        <td class="header-spacer"></td>
+        <td class="recipient-header">
+          <p>{{ recipient_title }}</p>
+          <p>{{ recipient_name }}</p>
+          <p>от студента {{ student_name }}</p>
+          <p>ID: {{ student_id }}</p>
+          <p>Группа: {{ group_or_faculty }}</p>
+        </td>
+      </tr>
+    </table>
+
+    <div class="document-title">{{ application_title or "ЗАЯВЛЕНИЕ" }}</div>
+    <div class="document-number">Регистрационный № {{ doc_number }}</div>
+
+    {% block content %}{% endblock %}
+
+    <table class="bottom-section">
+      <tr>
+        <td class="date-cell">{{ date }}</td>
+        <td class="signature-cell">
+          <div class="signature-box">ПОДПИСАНО ЭП</div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

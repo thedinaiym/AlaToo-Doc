@@ -48,6 +48,7 @@ class Document(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(255))
+    doc_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     raw_text: Mapped[str] = mapped_column(Text)
     file_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     status: Mapped[DocumentStatus] = mapped_column(

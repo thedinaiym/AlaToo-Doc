@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -12,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.dependencies import get_current_user
 from app.models import Document, DocumentStatus, Signature, User, UserRole
+from app.pdf_engine import DocumentType, render_document_to_pdf
 from app.schemas import DocumentCreate, DocumentDetailResponse, DocumentResponse
-from app.services.pdf_service import generate_document_pdf
 
 
 SYSTEM_PROMPT = (
@@ -23,6 +24,7 @@ SYSTEM_PROMPT = (
 )
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
+GENERATED_PDF_DIR = Path("static") / "generated_pdfs"
 
 
 async def get_document_for_user(
@@ -65,6 +67,7 @@ async def build_document_detail(
         {
             "id": document.id,
             "title": document.title,
+            "doc_type": document.doc_type,
             "raw_text": document.raw_text,
             "file_url": document.file_url,
             "status": document.status,
@@ -97,6 +100,7 @@ async def create_document(
 
     document = Document(
         title=payload.title,
+        doc_type=DocumentType.student_complaint.value,
         raw_text=payload.raw_text,
         status=DocumentStatus.pending,
         creator_id=current_user.id,
@@ -107,10 +111,25 @@ async def create_document(
 
     pdf_filename = f"{document.id}.pdf"
     pdf_path = Path("static") / "pdfs" / pdf_filename
-    generate_document_pdf(
-        title=document.title,
-        text=document.raw_text,
-        output_path=str(pdf_path),
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(
+        render_document_to_pdf(
+            DocumentType.student_complaint.value,
+            {
+                "title": document.title,
+                "application_title": "ЗАЯВЛЕНИЕ",
+                "doc_number": f"{datetime.now().year}-{str(document.id)[:8].upper()}",
+                "student_name": current_user.full_name,
+                "student_id": current_user.university_id,
+                "faculty": current_user.faculty or "Не указан",
+                "group_or_faculty": current_user.faculty or "Не указана",
+                "recipient_title": "Получателю",
+                "recipient_name": recipient.full_name,
+                "date": datetime.now().strftime("%d.%m.%Y"),
+                "final_text": document.raw_text,
+                "logo_path": "frontend/public/logo.png",
+            },
+        )
     )
     document.file_url = f"/static/pdfs/{pdf_filename}"
 
@@ -143,6 +162,107 @@ async def get_inbox_documents(
         )
     )
     return list(result.scalars().all())
+
+
+class FinalizeDocumentRequest(BaseModel):
+    student_id: str = Field(..., min_length=1)
+    doc_type: DocumentType
+    recipient_id: uuid.UUID
+    title: str = Field(..., min_length=1, max_length=255)
+    final_text: str = Field(..., min_length=1)
+
+
+class FinalizeDocumentResponse(DocumentResponse):
+    download_url: str
+
+
+@router.post(
+    "/finalize",
+    response_model=FinalizeDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def finalize_document(
+    payload: FinalizeDocumentRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> FinalizeDocumentResponse:
+    requested_student_id = payload.student_id.strip()
+    current_student_ids = {str(current_user.id), current_user.university_id}
+
+    if requested_student_id not in current_student_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can finalize documents only for your own student account",
+        )
+
+    recipient_result = await session.execute(
+        select(User).where(User.id == payload.recipient_id)
+    )
+    recipient = recipient_result.scalar_one_or_none()
+    if recipient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipient not found",
+        )
+
+    document = Document(
+        title=payload.title,
+        doc_type=payload.doc_type.value,
+        raw_text=payload.final_text,
+        status=DocumentStatus.pending,
+        creator_id=current_user.id,
+        recipient_id=recipient.id,
+    )
+    session.add(document)
+    await session.flush()
+
+    recipient_title = {
+        UserRole.dean: "Декану",
+        UserRole.teacher: "Преподавателю",
+        UserRole.admin: "Администратору",
+        UserRole.student: "Студенту",
+    }.get(recipient.role, "Получателю")
+
+    pdf_bytes = render_document_to_pdf(
+        payload.doc_type.value,
+        {
+            "title": payload.title,
+            "application_title": "ЗАЯВЛЕНИЕ",
+            "doc_number": f"{datetime.now().year}-{str(document.id)[:8].upper()}",
+            "student_name": current_user.full_name,
+            "student_id": current_user.university_id,
+            "faculty": current_user.faculty or "Не указан",
+            "group_or_faculty": current_user.faculty or "Не указана",
+            "recipient_title": recipient_title,
+            "recipient_name": recipient.full_name,
+            "date": datetime.now().strftime("%d.%m.%Y"),
+            "final_text": payload.final_text,
+            "logo_path": "frontend/public/logo.png",
+        },
+    )
+
+    GENERATED_PDF_DIR.mkdir(parents=True, exist_ok=True)
+    pdf_filename = f"{document.id}.pdf"
+    pdf_path = GENERATED_PDF_DIR / pdf_filename
+    pdf_path.write_bytes(pdf_bytes)
+    document.file_url = f"/static/generated_pdfs/{pdf_filename}"
+
+    await session.commit()
+    await session.refresh(document)
+
+    return FinalizeDocumentResponse.model_validate(
+        {
+            "id": document.id,
+            "title": document.title,
+            "doc_type": document.doc_type,
+            "raw_text": document.raw_text,
+            "file_url": document.file_url,
+            "status": document.status,
+            "creator_id": document.creator_id,
+            "recipient_id": document.recipient_id,
+            "download_url": document.file_url,
+        }
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentDetailResponse)

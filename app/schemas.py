@@ -59,6 +59,7 @@ class DocumentResponse(BaseModel):
 
     id: uuid.UUID
     title: str
+    doc_type: str | None = None
     raw_text: str
     file_url: str | None
     status: DocumentStatus

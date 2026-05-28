@@ -1,0 +1,2 @@
+DATABASE_URL=sqlite+aiosqlite:///./alatoo_doc.db
+GROQ_API_KEY=gsk_LHzPXnSLuFsf2DUcnfwKWGdyb3FYZHIrXEOakHLgmJIyxwFVkwQXs

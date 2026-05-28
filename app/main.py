@@ -19,6 +19,7 @@ from app.security import hash_password
 
 STATIC_DIR = Path("static")
 PDF_STORAGE_DIR = STATIC_DIR / "pdfs"
+GENERATED_PDF_STORAGE_DIR = STATIC_DIR / "generated_pdfs"
 
 
 async def ensure_local_schema() -> None:
@@ -31,6 +32,12 @@ async def ensure_local_schema() -> None:
 
         if "faculty" not in columns:
             await connection.execute(text("ALTER TABLE users ADD COLUMN faculty VARCHAR(255)"))
+
+        result = await connection.execute(text("PRAGMA table_info(documents)"))
+        document_columns = {row[1] for row in result.fetchall()}
+
+        if "doc_type" not in document_columns:
+            await connection.execute(text("ALTER TABLE documents ADD COLUMN doc_type VARCHAR(64)"))
 
 
 async def seed_dev_users() -> None:
@@ -117,6 +124,7 @@ app.include_router(documents_router)
 app.include_router(users_router)
 app.include_router(admin_router)
 PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+GENERATED_PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
