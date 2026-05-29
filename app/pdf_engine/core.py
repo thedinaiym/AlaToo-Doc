@@ -191,12 +191,17 @@ def _render_with_reportlab(_document_type: DocumentType, context: dict[str, Any]
         logo.hAlign = "CENTER"
         story.extend([logo, Spacer(1, 6 * mm)])
 
+    from_student_label = str(context.get("from_student_label") or "от студента")
+    group_label = str(context.get("group_label") or "Группа")
+    registration_label = str(context.get("registration_label") or "Регистрационный №")
+    signed_label = str(context.get("signed_label") or "ПОДПИСАНО ЭП")
+
     recipient_lines = [
         str(context.get("recipient_title") or ""),
         str(context.get("recipient_name") or ""),
-        f"от студента {context.get('student_name') or ''}",
+        f"{from_student_label} {context.get('student_name') or ''}",
         f"ID: {context.get('student_id') or ''}",
-        f"Группа: {context.get('group_or_faculty') or context.get('faculty') or ''}",
+        f"{group_label}: {context.get('group_or_faculty') or context.get('faculty') or ''}",
     ]
     recipient_block = "<br/>".join(escape(line) for line in recipient_lines if line)
     header_table = Table(
@@ -221,7 +226,7 @@ def _render_with_reportlab(_document_type: DocumentType, context: dict[str, Any]
     )
     story.append(
         Paragraph(
-            f"Регистрационный № {escape(str(context.get('doc_number') or ''))}",
+            f"{registration_label} {escape(str(context.get('doc_number') or ''))}",
             normal_style.clone("DocumentNumber", alignment=TA_CENTER, leading=14),
         )
     )
@@ -235,7 +240,7 @@ def _render_with_reportlab(_document_type: DocumentType, context: dict[str, Any]
         [
             [
                 Paragraph(escape(str(context.get("date") or "")), normal_style),
-                Paragraph("ПОДПИСАНО ЭП", signature_style),
+                Paragraph(escape(signed_label), signature_style),
             ]
         ],
         colWidths=[80 * mm, 80 * mm],

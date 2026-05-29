@@ -8,10 +8,46 @@ import type { User } from "@/src/types";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 type CurrentUser = User | null;
+type DocumentLanguage = "english" | "russian" | "kyrgyz";
+type StudentSex = "male" | "female";
+
+const LANGUAGE_OPTIONS: { value: DocumentLanguage; label: string }[] = [
+  { value: "english", label: "English" },
+  { value: "russian", label: "Русский" },
+  { value: "kyrgyz", label: "Кыргызча" },
+];
+
+const SEX_OPTIONS: { value: StudentSex; label: string }[] = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+];
+
+const PROMPT_LABELS: Record<
+  DocumentLanguage,
+  { fallbackFaculty: string; fallbackRecipient: string; topic: string }
+> = {
+  english: {
+    fallbackFaculty: "General",
+    fallbackRecipient: "Dean",
+    topic: "Topic",
+  },
+  russian: {
+    fallbackFaculty: "Общий",
+    fallbackRecipient: "Декан",
+    topic: "Тема",
+  },
+  kyrgyz: {
+    fallbackFaculty: "Жалпы",
+    fallbackRecipient: "Декан",
+    topic: "Тема",
+  },
+};
 
 export default function CreateDocumentPage() {
   const router = useRouter();
   const [topic, setTopic] = useState("");
+  const [language, setLanguage] = useState<DocumentLanguage>("english");
+  const [sex, setSex] = useState<StudentSex>("male");
   const [recipientId, setRecipientId] = useState("");
   const [reason, setReason] = useState("");
   const [generatedText, setGeneratedText] = useState("");
@@ -76,6 +112,7 @@ export default function CreateDocumentPage() {
     }
 
     setIsGenerating(true);
+    const promptLabels = PROMPT_LABELS[language];
 
     try {
       const response = await fetch(`${API_URL}/api/v1/documents/predict-text`, {
@@ -85,9 +122,11 @@ export default function CreateDocumentPage() {
         },
         body: JSON.stringify({
           student_name: currentUser?.full_name ?? "Student",
-          faculty: "General",
-          recipient_title: selectedDean?.full_name ?? "Dean",
-          reason: `Topic: ${topic}\n${reason}`,
+          faculty: currentUser?.faculty ?? promptLabels.fallbackFaculty,
+          recipient_title: selectedDean?.full_name ?? promptLabels.fallbackRecipient,
+          sex,
+          reason: `${promptLabels.topic}: ${topic}\n${reason}`,
+          language,
         }),
       });
 
@@ -132,6 +171,7 @@ export default function CreateDocumentPage() {
           title: topic,
           raw_text: generatedText,
           recipient_id: recipientId,
+          language,
         }),
       });
 
@@ -170,7 +210,7 @@ export default function CreateDocumentPage() {
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <label htmlFor="topic" className="block text-sm font-medium text-gray-800">
                 Topic
@@ -183,6 +223,49 @@ export default function CreateDocumentPage() {
                 placeholder="Application topic"
                 required
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="language"
+                className="block text-sm font-medium text-gray-800"
+              >
+                Document Language
+              </label>
+              <select
+                id="language"
+                value={language}
+                onChange={(event) =>
+                  setLanguage(event.target.value as DocumentLanguage)
+                }
+                className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                required
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="sex" className="block text-sm font-medium text-gray-800">
+                Sex
+              </label>
+              <select
+                id="sex"
+                value={sex}
+                onChange={(event) => setSex(event.target.value as StudentSex)}
+                className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                required
+              >
+                {SEX_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

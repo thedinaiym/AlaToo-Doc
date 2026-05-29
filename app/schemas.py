@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 import uuid
+import enum
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
 from app.models import DocumentStatus, UserRole
+
+
+class DocumentLanguage(str, enum.Enum):
+    english = "english"
+    russian = "russian"
+    kyrgyz = "kyrgyz"
+
+
+class StudentSex(str, enum.Enum):
+    male = "male"
+    female = "female"
 
 
 class UserCreate(BaseModel):
@@ -52,6 +64,7 @@ class DocumentCreate(BaseModel):
     raw_text: str
     file_url: str | None = None
     recipient_id: uuid.UUID
+    language: DocumentLanguage = DocumentLanguage.russian
 
 
 class DocumentResponse(BaseModel):
